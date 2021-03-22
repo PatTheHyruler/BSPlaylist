@@ -76,11 +76,8 @@ class Playlist:
         hashes = {}
         requestlist = []
         for song in __initsongs:
-            try:
-                hashes[song["hash"]] = {"hash": song["hash"], "name": song["songName"]}
-            except KeyError:
-                hashes[song["hash"]] = {"hash": song["hash"]}
-                requestlist.append(song["hash"])
+            hashes[song["hash"]] = {"hash": song["hash"]}
+            requestlist.append(song["hash"])
         self.songs = hashes
         self.requestlist = requestlist
         
@@ -89,13 +86,12 @@ class Playlist:
         for songhash in self.songs:
             song = self.songs[songhash]
             try:
-                namelist.append(song["name"])
+                namelist.append(song["songName"])
             except KeyError:
                 namelist.append("[Requesting song info from Beatsaver...]")
         return namelist
 
     def addtoqueue(self, queue):
-        print(self.requestlist)
         queue[self.title_ext] = self.requestlist
         return queue
 
@@ -150,7 +146,11 @@ def queuefunc(currentqueue, queue: dict, playlist: object):
     url = f"https://beatsaver.com/api/maps/by-hash/{songhash}"
     text = requests.get(url, headers=headers).text
     songdata = json.loads(text)
-    playlist.songs[songhash]["name"] = songdata["metadata"]["songName"]
+    playlist.songs[songhash]["songName"] = songdata["metadata"]["songName"]
+    playlist.songs[songhash]["downloadURL"] = songdata["downloadURL"]
+    playlist.songs[songhash]["key"] = songdata["key"]
+    playlist.songs[songhash]["coverURL"] = songdata["coverURL"]
+
     print("Loaded "+songdata["metadata"]["songName"])
     try:
         if currentplaylist == playlist:
@@ -221,7 +221,6 @@ layout = 1
 
 def runQueue(queueactive):
     while queueactive:
-        print("runqueue")
         try:
             queuetop = queueprioritylist[0]
             currentqueue = queue[queuetop]
@@ -231,9 +230,11 @@ def runQueue(queueactive):
             #print(e)
         try:
             queuefunc(currentqueue, queue, queueplaylist)
+            print("runqueue")
         except IndexError:
             queueactive = False
         except Exception as e:
+            raise
             #print(e)
             pass
 
@@ -243,8 +244,6 @@ def updateNames(playlist):
 
 while True:
     threading.Thread(target=runQueue, args = (queueactive,), daemon=True).start()
-    
-    print(threading.active_count())
 
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
@@ -254,8 +253,8 @@ while True:
     if event == "-RELOAD-":
         playlists, filenames, playlistnames = updatePlaylists(playlistspath)
     if event == "-FILE LIST-":  # A file was chosen from the listbox
-        print(f"Layout: {layout}")
-        print(values["-FILE LIST-"])
+        #print(f"Layout: {layout}")
+        #print(values["-FILE LIST-"])
         if layout == 1:
             window[f'-COL{layout}-'].update(visible=False)
             layout = 2
@@ -271,8 +270,8 @@ while True:
         queueactive = True
         queueToTop(currentplaylistname)
         queue = playlist.addtoqueue(queue)
-        print("Queue:")
-        print(queue)
+        #print("Queue:")
+        #print(queue)
         try:
             updateNames(playlist)
         except:
