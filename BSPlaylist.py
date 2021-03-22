@@ -16,6 +16,7 @@ headers = {
 }
 queue = {}
 queueprioritylist = []
+queueactive = False
 # global variables end
 
 
@@ -151,7 +152,11 @@ def queuefunc(currentqueue, queue: dict, playlist: object):
     songdata = json.loads(text)
     playlist.songs[songhash]["name"] = songdata["metadata"]["songName"]
     print("Loaded "+songdata["metadata"]["songName"])
-
+    try:
+        if currentplaylist == playlist:
+            updateNames(playlist)
+    except:
+        pass
 
 
 
@@ -214,27 +219,30 @@ if playlistspath:
 
 layout = 1
 
-def runQueue():
-    print("runqueue")
-    try:
-        queuetop = queueprioritylist[0]
-        currentqueue = queue[queuetop]
-        queueplaylist = playlists[playlistnames.index(queueprioritylist[0])]
-    except Exception as e:
-        pass
-        #print(e)
-    try:
-        queuefunc(currentqueue, queue, queueplaylist)
-    except Exception as e:
-        pass
-        #print(e)
+def runQueue(queueactive):
+    while queueactive:
+        print("runqueue")
+        try:
+            queuetop = queueprioritylist[0]
+            currentqueue = queue[queuetop]
+            queueplaylist = playlists[playlistnames.index(queueprioritylist[0])]
+        except Exception as e:
+            pass
+            #print(e)
+        try:
+            queuefunc(currentqueue, queue, queueplaylist)
+        except IndexError:
+            queueactive = False
+        except Exception as e:
+            #print(e)
+            pass
 
 def updateNames(playlist):
     print("updatenames")
     window["-SONG LIST-"].update(playlist.getNames())
 
 while True:
-    threading.Thread(target=runQueue, daemon=True).start()
+    threading.Thread(target=runQueue, args = (queueactive,), daemon=True).start()
     
     print(threading.active_count())
 
@@ -258,19 +266,22 @@ while True:
         # playlistindex - currently selected playlist's index
         playlistindex = playlistnames.index(currentplaylistname)
         # playlist = currently selected playlist
-        playlist = playlists[playlistindex]
-        
+        currentplaylist = playlist = playlists[playlistindex]
+
+        queueactive = True
         queueToTop(currentplaylistname)
         queue = playlist.addtoqueue(queue)
         print("Queue:")
         print(queue)
+        try:
+            updateNames(playlist)
+        except:
+            pass
         
         #print(playlist.songs)
-        
-        
-    
+
     if layout == 2:
-        threading.Thread(target=updateNames, daemon=True, args = (playlist,)).start()
+        pass
         
 
 window.close()
