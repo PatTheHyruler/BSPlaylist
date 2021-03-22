@@ -5,6 +5,7 @@ import ast
 import json
 import requests
 import PySimpleGUI as sg
+import threading
 
 
 # global variables start
@@ -213,20 +214,30 @@ if playlistspath:
 
 layout = 1
 
-
-while True:
+def runQueue():
+    print("runqueue")
     try:
         queuetop = queueprioritylist[0]
         currentqueue = queue[queuetop]
         queueplaylist = playlists[playlistnames.index(queueprioritylist[0])]
     except Exception as e:
-        print(e)
+        pass
+        #print(e)
     try:
         queuefunc(currentqueue, queue, queueplaylist)
     except Exception as e:
-        print(e)
+        pass
+        #print(e)
+
+def updateNames(playlist):
+    print("updatenames")
+    window["-SONG LIST-"].update(playlist.getNames())
+
+while True:
+    threading.Thread(target=runQueue, daemon=True).start()
     
-    
+    print(threading.active_count())
+
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
         break
@@ -259,7 +270,8 @@ while True:
         
     
     if layout == 2:
-        window["-SONG LIST-"].update(playlist.getNames())
+        threading.Thread(target=updateNames, daemon=True, args = (playlist,)).start()
+        
 
 window.close()
 
