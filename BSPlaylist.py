@@ -63,6 +63,7 @@ class Playlist:
         with open(filepath, encoding="utf8") as f:
             playlist = json.load(f)
         
+        self.filepath = filepath
         self.raw = playlist
         self.title = playlist["playlistTitle"]
         self.title_ext = self.title
@@ -95,6 +96,32 @@ class Playlist:
         queue[self.title_ext] = self.requestlist
         return queue
 
+    def remove(self, songhash):
+        self.songs.pop(songhash)
+        try:
+            self.requestlist.pop(songhash)
+        except:
+            pass
+
+    def save(self):
+        writedict = {}
+        writedict["playlistTitle"] = self.title
+        writedict["playlistAuthor"] = self.author
+        if self.description:
+            writedict["playlistDescription"] = self.description
+        writedict["songs"] = []
+        for song in self.songs:
+            writedict["songs"].append({"hash": song})
+        with open(self.filepath, "w") as f:
+            json.dump(writedict, f)
+            pass
+
+    def add(self, songhash):
+        self.songs[songhash] = {"hash": songhash}
+        self.save()
+
+
+    
 
 def loadPlaylists(playlistspath):
     playlists = []
@@ -252,6 +279,10 @@ while True:
         playlistspath = values["-FOLDER-"]
     if event == "-RELOAD-":
         playlists, filenames, playlistnames = updatePlaylists(playlistspath)
+        if layout == 2:
+            window[f'-COL{layout}-'].update(visible=False)
+        layout = 1
+        window[f'-COL{layout}-'].update(visible=True)
     if event == "-FILE LIST-":  # A file was chosen from the listbox
         #print(f"Layout: {layout}")
         #print(values["-FILE LIST-"])
