@@ -64,6 +64,7 @@ class Playlist:
             playlist = json.load(f)
         
         self.filepath = filepath
+        self.deleted = False
         self.raw = playlist
         self.title = playlist["playlistTitle"]
         self.title_ext = self.title
@@ -104,6 +105,7 @@ class Playlist:
             pass
 
     def save(self):
+        print("saved")
         writedict = {}
         writedict["playlistTitle"] = self.title
         writedict["playlistAuthor"] = self.author
@@ -114,7 +116,13 @@ class Playlist:
             writedict["songs"].append({"hash": song})
         with open(self.filepath, "w") as f:
             json.dump(writedict, f)
+            self.deleted = False
             pass
+
+    def delete(self):
+        if os.path.exists(self.filepath):
+            os.remove(self.filepath)
+            self.deleted = True
 
     def add(self, songhash):
         self.songs[songhash] = {"hash": songhash}
@@ -153,7 +161,7 @@ def updatePlaylists(playlistspath):
                 playlistnames.append(filenames[index])
                 pl.title_ext = filenames[index]
                 
-    window["-FILE LIST-"].update(playlistnames)
+    window["-PLAYLISTS LIST-"].update(playlistnames)
     # playlists - list of instances of Playlist class
     # filenames - list of filenames of playlists
     # playlistnames - list of modified playlist names (to deal with potential duplicate names)
@@ -198,8 +206,9 @@ playlist_column = [
     ],
     [
         sg.Listbox(
-            values=[], enable_events=True, size=(40, 20), key="-FILE LIST-"
-        )
+            values=[], enable_events=True, size=(40, 20), key="-PLAYLISTS LIST-"
+        ),
+        sg.Button("Delete selected playlist", key="-deleteplaylistbutton-")
     ],
 ]
 
@@ -223,7 +232,7 @@ layout1 = [
 
 layout2 = [
     [
-        sg.Column(song_list),
+        sg.Column(song_list, key="-SONG COLUMN-")
     ]
 ]
 
@@ -244,15 +253,13 @@ window["-FOLDER-"].update(playlistspath)
 if playlistspath:
     playlists, filenames, playlistnames = updatePlaylists(playlistspath)
 
-layout = 1
-
 def runQueue(queueactive):
     while queueactive:
         try:
             queuetop = queueprioritylist[0]
             currentqueue = queue[queuetop]
             queueplaylist = playlists[playlistnames.index(queueprioritylist[0])]
-        except Exception as e:
+        except Exception:
             pass
             #print(e)
         try:
@@ -260,15 +267,23 @@ def runQueue(queueactive):
             print("runqueue")
         except IndexError:
             queueactive = False
-        except Exception as e:
-            raise
+        except Exception:
+            #raise
             #print(e)
             pass
 
 def updateNames(playlist):
-    print("updatenames")
+    #print("updatenames")
     window["-SONG LIST-"].update(playlist.getNames())
 
+def setLayout():
+    window[f'-COL1-'].update(visible=False)
+    window[f'-COL2-'].update(visible=True)
+def resetLayout():
+    window[f'-COL1-'].update(visible=True)
+    window[f'-COL2-'].update(visible=False)
+
+selectedsong = False
 while True:
     threading.Thread(target=runQueue, args = (queueactive,), daemon=True).start()
 
@@ -279,20 +294,14 @@ while True:
         playlistspath = values["-FOLDER-"]
     if event == "-RELOAD-":
         playlists, filenames, playlistnames = updatePlaylists(playlistspath)
-        if layout == 2:
-            window[f'-COL{layout}-'].update(visible=False)
-        layout = 1
+        resetLayout()
         window[f'-COL{layout}-'].update(visible=True)
-    if event == "-FILE LIST-":  # A file was chosen from the listbox
+    if event == "-PLAYLISTS LIST-":  # A file was chosen from the listbox
         #print(f"Layout: {layout}")
-        #print(values["-FILE LIST-"])
-        if layout == 1:
-            window[f'-COL{layout}-'].update(visible=False)
-            layout = 2
-            window[f'-COL{layout}-'].update(visible=True)
-        
-        
-        currentplaylistname = values["-FILE LIST-"][0]
+        #print(values["-PLAYLISTS LIST-"])
+        setLayout()
+
+        currentplaylistname = values["-PLAYLISTS LIST-"][0]
         # playlistindex - currently selected playlist's index
         playlistindex = playlistnames.index(currentplaylistname)
         # playlist = currently selected playlist
@@ -309,8 +318,16 @@ while True:
             pass
         
         #print(playlist.songs)
-
-    if layout == 2:
+    if event == "-deleteplaylistbutton-":
+        try:
+            playlist.delete()
+            updatePlaylists(playlistspath)
+            resetLayout()
+        except:
+            pass
+    if event == "-SONG LIST-":
+        selectedsong = values["-SONG LIST-"][0]
+    if event == "-removesong-":
         pass
         
 
