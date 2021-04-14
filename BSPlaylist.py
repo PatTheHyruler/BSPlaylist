@@ -333,6 +333,7 @@ while True:
         if len(selectedplaylistindex) == 1:
             setLayoutSonglist()
         if len(selectedplaylistindex) > 1:
+            resetLayout()
             updatePlInfoMsg(1)
 
         print(values["-PLAYLISTS TABLE-"])
