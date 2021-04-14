@@ -18,6 +18,10 @@ queue = {}
 queueprioritylist = []
 queueactive = False
 # global variables end
+PlInfoMsgDict = {
+    0: "Choose a playlist from the panel to the left",
+    1: "Please only select 1 playlist"
+}
 
 
 def get_steam_path():
@@ -151,7 +155,7 @@ def updatePlaylists(playlistspath):
         else:
             success = False
             for i in range(10):
-                testname = f"{pl.title} - Copy {i}"
+                testname = f"{pl.title} - Copy {i+1}"
                 if testname not in playlistnames:
                     playlistnames.append(testname)
                     pl.title_ext = testname
@@ -160,8 +164,15 @@ def updatePlaylists(playlistspath):
             if not success:
                 playlistnames.append(filenames[index])
                 pl.title_ext = filenames[index]
-                
-    window["-PLAYLISTS LIST-"].update(playlistnames)
+    
+
+    playlistupdatelist = []
+    for i in playlistnames:
+        playlistupdatelist.append([i, "testtest"])
+
+    #window.Element("-PLAYLISTS TABLE-").Update(values=playlistupdatelist)
+    window["-PLAYLISTS TABLE-"].update(values=playlistupdatelist)
+
     # playlists - list of instances of Playlist class
     # filenames - list of filenames of playlists
     # playlistnames - list of modified playlist names (to deal with potential duplicate names)
@@ -197,6 +208,8 @@ def queuefunc(currentqueue, queue: dict, playlist: object):
 
 
 
+playlisttable_headings = ["Playlist Name", "Header2"]
+playlisttable_values = [["" for i in range(len(playlisttable_headings))]]
 playlist_column = [
     [
         sg.Text("Playlists Folder"),
@@ -205,21 +218,36 @@ playlist_column = [
         sg.Button("Load/Reload Playlists", key="-RELOAD-")
     ],
     [
-        sg.Listbox(
-            values=[], enable_events=True, size=(40, 20), key="-PLAYLISTS LIST-"
+        sg.Table(
+            values=playlisttable_values,
+            headings=playlisttable_headings,
+            enable_events=True,
+            auto_size_columns=False,
+            vertical_scroll_only=False,
+            max_col_width=80,
+            def_col_width=30,
+            num_rows=20,
+            justification='center',
+            key="-PLAYLISTS TABLE-"
         ),
         sg.Button("Delete selected playlist", key="-deleteplaylistbutton-")
     ],
 ]
 
 song_list_text = [
-    [sg.Text("Choose a playlist from the panel to the left")]
+    [sg.Text(text=PlInfoMsgDict[0],key="-PL INFOMSG-")]
 ]
 
+songlisttable_headings = ["Song name", "add more columns later"]
+songlisttable_values = [["" for i in range(len(songlisttable_headings))]]
 song_list = [
     [
-        sg.Listbox(
-            values=[], enable_events=True, size=(40, 20), key="-SONG LIST-"
+        sg.Table(
+            values=songlisttable_values,
+            headings=songlisttable_headings,
+            enable_events=True,
+            size=(40, 20),
+            key="-SONG TABLE-"
         )
     ]
 ]
@@ -274,14 +302,24 @@ def runQueue(queueactive):
 
 def updateNames(playlist):
     #print("updatenames")
-    window["-SONG LIST-"].update(playlist.getNames())
+    songupdatelist = []
+    for i in playlist.getNames():
+        songupdatelist.append([i, "placeholder"])
+    window["-SONG TABLE-"].update(values=songupdatelist)
 
-def setLayout():
+def setLayoutSonglist():
     window[f'-COL1-'].update(visible=False)
     window[f'-COL2-'].update(visible=True)
 def resetLayout():
     window[f'-COL1-'].update(visible=True)
     window[f'-COL2-'].update(visible=False)
+def updatePlInfoMsg(index, PlInfoMsgDict=PlInfoMsgDict):
+    window["-PL INFOMSG-"].update(PlInfoMsgDict[index])
+def resetUI():
+    updatePlInfoMsg(0)
+    resetLayout()
+
+updatePlInfoMsg(0)
 
 selectedsong = False
 while True:
@@ -290,45 +328,14 @@ while True:
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
         break
-    if event == "-FOLDER-":
-        playlistspath = values["-FOLDER-"]
-    if event == "-RELOAD-":
-        playlists, filenames, playlistnames = updatePlaylists(playlistspath)
-        resetLayout()
-        window[f'-COL{layout}-'].update(visible=True)
-    if event == "-PLAYLISTS LIST-":  # A file was chosen from the listbox
-        #print(f"Layout: {layout}")
-        #print(values["-PLAYLISTS LIST-"])
-        setLayout()
+    if event == "-PLAYLISTS TABLE-":
+        selectedplaylistindex = values["-PLAYLISTS TABLE-"]
+        if len(selectedplaylistindex) == 1:
+            setLayoutSonglist()
+        if len(selectedplaylistindex) > 1:
+            updatePlInfoMsg(1)
 
-        currentplaylistname = values["-PLAYLISTS LIST-"][0]
-        # playlistindex - currently selected playlist's index
-        playlistindex = playlistnames.index(currentplaylistname)
-        # playlist = currently selected playlist
-        currentplaylist = playlist = playlists[playlistindex]
-
-        queueactive = True
-        queueToTop(currentplaylistname)
-        queue = playlist.addtoqueue(queue)
-        #print("Queue:")
-        #print(queue)
-        try:
-            updateNames(playlist)
-        except:
-            pass
-        
-        #print(playlist.songs)
-    if event == "-deleteplaylistbutton-":
-        try:
-            playlist.delete()
-            updatePlaylists(playlistspath)
-            resetLayout()
-        except:
-            pass
-    if event == "-SONG LIST-":
-        selectedsong = values["-SONG LIST-"][0]
-    if event == "-removesong-":
-        pass
+        print(values["-PLAYLISTS TABLE-"])
         
 
 window.close()
