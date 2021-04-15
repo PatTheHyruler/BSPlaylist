@@ -62,6 +62,14 @@ songspath = f"{path}Beat Saber_Data\\CustomLevels"
 # NB! need to make sure program works if path detection fails
 
 
+class EmptyRequestError(Exception):
+        def __init__(self, errors=""):
+            super().__init__()
+            self.errors = errors
+            if bool(self.errors):
+                print(f"Errors: {errors}")
+
+
 class Playlist:
     def __init__(self, filepath):
         with open(filepath, encoding="utf8") as f:
@@ -194,7 +202,10 @@ def queueToTop(playlistname_ext):
         queueprioritylist.insert(0, queueprioritylist.pop(queueprioritylist.index(playlistname_ext)))
 
 def queuefunc(currentqueue, queue: dict, playlist: object):
-    songhash = playlist.requestlist.pop(0)
+    try:
+        songhash = playlist.requestlist.pop(0)
+    except IndexError:
+        raise EmptyRequestError()
     url = f"https://beatsaver.com/api/maps/by-hash/{songhash}"
     text = requests.get(url, headers=headers).text
     songdata = json.loads(text)
@@ -236,7 +247,7 @@ playlist_column = [
             justification='center',
             key="-PLAYLISTS TABLE-"
         ),
-        sg.Button("Delete selected playlist", key="-DELETE PLAYLISTS-")
+        sg.Button("Delete selected playlist(s)", key="-DELETE PLAYLISTS-")
     ],
 ]
 
@@ -252,6 +263,9 @@ song_list = [
             values=songlisttable_values,
             headings=songlisttable_headings,
             enable_events=True,
+            auto_size_columns=False,
+            max_col_width=80,
+            def_col_width=20,
             size=(40, 20),
             justification='center',
             key="-SONG TABLE-"
@@ -295,12 +309,13 @@ def runQueue():
     global queueprioritylist
     while True:
         if queueactive:
-            print(queueactive)
+            if not bool(queue):
+                queueactive = False
+            print(f"queue: {queue}")
+            print(f"queueactive: {queueactive}\nqueueprioritylist: {queueprioritylist}")
             try:
                 queuetop = queueprioritylist[0]
-                #print(queue)
                 currentqueue = queue[queuetop]
-                #print(currentqueue)
                 queueplaylist = playlists[playlistnames.index(queueprioritylist[0])]
             except Exception:
                 #raise
@@ -308,22 +323,22 @@ def runQueue():
                 #print(e)
             try:
                 queuefunc(currentqueue, queue, queueplaylist)
-                print("queuefunc")
-            except IndexError:
-                if len(currentqueue) == 0 and len(queueprioritylist) != 0 and len(queue) != 0:
-                    queueprioritylist.pop(0)
-                    queue.pop(queuetop)
-            except Exception:
+            except EmptyRequestError:
                 #raise
-                #print(e)
+                if bool(queueprioritylist):
+                    queueprioritylist.pop(0)
+                if bool(queue):
+                    queue.pop(queuetop)
+            except Exception as e:
+                #raise
+                print(e)
                 pass
             if len(queueprioritylist) == 0:
                 if bool(queue):
+                    print("got here")
                     for key in queue:
                         queueToTop(key)
                         break
-                else:
-                    queueactive = False
 
 
 def updateNames(playlist):
@@ -350,9 +365,6 @@ updatePlInfoMsg(0)
 selectedsong = False
 threading.Thread(target=runQueue, daemon=True).start()
 while True:
-
-    print(queueactive)
-
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
         break
