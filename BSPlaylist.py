@@ -86,6 +86,8 @@ class Playlist:
             requestlist.append(song["hash"])
         self.songs = hashes
         self.requestlist = requestlist
+        global queueactive
+        queueactive = True
         
     def getNames(self):
         namelist = []
@@ -136,6 +138,8 @@ class Playlist:
     
 
 def loadPlaylists(playlistspath):
+    """This function just gets called by updatePlaylists()
+    and shouldn't need to be used on its own."""
     playlists = []
     filenames = []
     for root, dirs, files in os.walk(playlistspath):
@@ -164,7 +168,8 @@ def updatePlaylists(playlistspath):
             if not success:
                 playlistnames.append(filenames[index])
                 pl.title_ext = filenames[index]
-    
+        global queue
+        pl.addtoqueue(queue)
 
     playlistupdatelist = []
     for i in playlistnames:
@@ -181,6 +186,7 @@ def updatePlaylists(playlistspath):
 
 
 def queueToTop(playlistname_ext):
+    global queueprioritylist
     try:
         queueprioritylist.insert(0, queueprioritylist.pop(queueprioritylist.index(playlistname_ext)))
     except ValueError:
@@ -230,7 +236,7 @@ playlist_column = [
             justification='center',
             key="-PLAYLISTS TABLE-"
         ),
-        sg.Button("Delete selected playlist", key="-deleteplaylistbutton-")
+        sg.Button("Delete selected playlist", key="-DELETE PLAYLISTS-")
     ],
 ]
 
@@ -247,6 +253,7 @@ song_list = [
             headings=songlisttable_headings,
             enable_events=True,
             size=(40, 20),
+            justification='center',
             key="-SONG TABLE-"
         )
     ]
@@ -278,27 +285,46 @@ window = sg.Window("BS Playlist Editor", layout, finalize=True)
 
 window["-FOLDER-"].update(playlistspath)
 
+print(f"before init {queueactive}")
 if playlistspath:
     playlists, filenames, playlistnames = updatePlaylists(playlistspath)
+print(f"after init {queueactive}")
 
-def runQueue(queueactive):
-    while queueactive:
-        try:
-            queuetop = queueprioritylist[0]
-            currentqueue = queue[queuetop]
-            queueplaylist = playlists[playlistnames.index(queueprioritylist[0])]
-        except Exception:
-            pass
-            #print(e)
-        try:
-            queuefunc(currentqueue, queue, queueplaylist)
-            print("runqueue")
-        except IndexError:
-            queueactive = False
-        except Exception:
-            #raise
-            #print(e)
-            pass
+def runQueue():
+    global queueactive
+    global queueprioritylist
+    while True:
+        if queueactive:
+            print(queueactive)
+            try:
+                queuetop = queueprioritylist[0]
+                #print(queue)
+                currentqueue = queue[queuetop]
+                #print(currentqueue)
+                queueplaylist = playlists[playlistnames.index(queueprioritylist[0])]
+            except Exception:
+                #raise
+                pass
+                #print(e)
+            try:
+                queuefunc(currentqueue, queue, queueplaylist)
+                print("queuefunc")
+            except IndexError:
+                if len(currentqueue) == 0 and len(queueprioritylist) != 0 and len(queue) != 0:
+                    queueprioritylist.pop(0)
+                    queue.pop(queuetop)
+            except Exception:
+                #raise
+                #print(e)
+                pass
+            if len(queueprioritylist) == 0:
+                if bool(queue):
+                    for key in queue:
+                        queueToTop(key)
+                        break
+                else:
+                    queueactive = False
+
 
 def updateNames(playlist):
     #print("updatenames")
@@ -322,21 +348,40 @@ def resetUI():
 updatePlInfoMsg(0)
 
 selectedsong = False
+threading.Thread(target=runQueue, daemon=True).start()
 while True:
-    threading.Thread(target=runQueue, args = (queueactive,), daemon=True).start()
+
+    print(queueactive)
 
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
         break
     if event == "-PLAYLISTS TABLE-":
-        selectedplaylistindex = values["-PLAYLISTS TABLE-"]
-        if len(selectedplaylistindex) == 1:
-            setLayoutSonglist()
-        if len(selectedplaylistindex) > 1:
+        selectedplaylists = values["-PLAYLISTS TABLE-"]
+        if len(selectedplaylists) > 1:
             resetLayout()
             updatePlInfoMsg(1)
-
-        print(values["-PLAYLISTS TABLE-"])
+        elif len(selectedplaylists) == 1:
+            queueactive = True
+            setLayoutSonglist()
+            currentplaylist = playlists[selectedplaylists[0]]
+            updateNames(currentplaylist)
+            queueToTop(playlistnames[selectedplaylists[0]])
+    
+    if event == "-DELETE PLAYLISTS-":
+        try:
+            for index in selectedplaylists:
+                playlists[index].delete()
+        except:
+            print("could not delete playlist")
+            pass
+        else:
+            resetUI()
+            updatePlaylists(playlistspath)
+    
+    if event == "-RELOAD-":
+        resetUI()
+        updatePlaylists(playlistspath)
         
 
 window.close()
