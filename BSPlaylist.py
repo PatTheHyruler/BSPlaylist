@@ -94,8 +94,8 @@ class Playlist:
             requestlist.append(song["hash"])
         self.songs = hashes
         self.requestlist = requestlist
-        global queueactive
-        queueactive = True
+        #global queueactive
+        #queueactive = True
         
     def getNames(self):
         namelist = []
@@ -142,6 +142,26 @@ class Playlist:
         self.songs[songhash] = {"hash": songhash}
         self.save()
 
+
+class Song(songpath):
+    def __init__(self):
+        with open(os.path.join(songpath, "metadata.dat"), "r", encoding="utf8") as f:
+            metadata = json.load(f)
+        self.hash = metadata["hash"]
+        with open(os.path.join(songpath, "info.dat"), "r", encoding="utf8") as f:
+            info = json.load(f)
+        self.name = info["_songName"]
+        self.subname = info["_songSubName"]
+        self.author = info["_levelAuthorName"]
+        self.bpm = info["_beatsPerMinute"]
+        songfilename = info["_songFilename"]
+        coverimagefilename = info["_coverImageFilename"]
+        try:
+            self.contributors = info["_customData"]["_contributors"]
+        except:
+            pass
+        
+    pass
 
     
 
