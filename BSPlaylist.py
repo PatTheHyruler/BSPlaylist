@@ -22,7 +22,7 @@ PlInfoMsgDict = {
     0: "Choose a playlist from the panel to the left",
     1: "Please only select 1 playlist"
 }
-
+songsdict = {}
 
 def get_steam_path():
     
@@ -104,7 +104,7 @@ class Playlist:
             try:
                 namelist.append(song["songName"])
             except KeyError:
-                namelist.append("[Requesting song info from Beatsaver...]")
+                namelist.append("[Getting song info...]")
         return namelist
 
     def addtoqueue(self, queue):
@@ -143,8 +143,8 @@ class Playlist:
         self.save()
 
 
-class Song(songpath):
-    def __init__(self):
+class Song():
+    def __init__(self, songpath):
         with open(os.path.join(songpath, "metadata.dat"), "r", encoding="utf8") as f:
             metadata = json.load(f)
         self.hash = metadata["hash"]
@@ -241,8 +241,16 @@ def queuefunc(currentqueue, queue: dict, playlist: object):
     except:
         pass
 
-
-
+def loadsongs(songspath):
+    for root, dirs, files in os.walk(songspath):
+        for filename in files:
+            #print(os.path.join(root, filename))
+            songpath = os.path.join(root, filename)
+            song = Song(songpath)
+            songsdict[song.hash] = song
+            print(songsdict)
+            
+loadsongs(songspath)
 
 
 playlisttable_headings = ["Playlist Name", "Header2"]
