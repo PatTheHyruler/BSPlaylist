@@ -15,16 +15,12 @@ headers = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
     'accept-language': 'en-US,en;q=0.9,et;q=0.8',
 }
-queue = {}
-queueprioritylist = []
-queueactive = False
-# global variables end
+songsdict = {}
 PlInfoMsgDict = {
     0: "Choose a playlist from the panel to the left",
     1: "Please only select 1 playlist"
 }
-songsdict = {}
-
+# global variables end
 
 def sha1(fnames):
     hash_sha1 = hashlib.sha1()
@@ -95,31 +91,32 @@ class Playlist:
             self.description = playlist["playlistDescription"]
         except:
             self.description = ""
-        
+
+        global songsdict
         __initsongs = playlist["songs"]
         hashes = {}
-        requestlist = []
         for song in __initsongs:
-            hashes[song["hash"]] = {"hash": song["hash"]}
-            requestlist.append(song["hash"])
-        self.songs = hashes
-        self.requestlist = requestlist
-        #global queueactive
-        #queueactive = True
-        
-    def getNames(self):
-        namelist = []
-        for songhash in self.songs:
-            song = self.songs[songhash]
+            songhash = song["hash"].lower()
+            
             try:
-                namelist.append(song["songName"])
-            except KeyError:
-                namelist.append("[Getting song info...]")
-        return namelist
+                hashes[songhash] = {
+                    "hash": songhash,
+                    "songName": songsdict[songhash].name
+                }
+            except:
+                print(filepath)
+                print(songhash)
 
-    def addtoqueue(self, queue):
-        queue[self.title_ext] = self.requestlist
-        return queue
+        self.songs = hashes
+        
+    def getData(self):
+        namelist = []
+        for song in self.songs:
+            namelist.append(song["songName"])
+        return namelist
+    
+    def getNames(self):
+        self.getData()
 
     def remove(self, songhash):
         self.songs.pop(songhash)
@@ -163,9 +160,11 @@ class Song():
         self.bpm = info["_beatsPerMinute"]
         songfilename = info["_songFilename"]
         coverimagefilename = info["_coverImageFilename"]
-        self.__diff_files = []
+        self.diff_files = []
         for diff in info["_difficultyBeatmapSets"][0]["_difficultyBeatmaps"]:
-            self.__diff_files.append(os.path.join(songpath, diff["_beatmapFilename"]))
+            self.diff_files.append(os.path.join(songpath, diff["_beatmapFilename"]))
+        files_to_hash = [item for item in self.diff_files]
+        files_to_hash.insert(0, os.path.join(songpath, "Info.dat"))
         try:
             self.contributors = info["_customData"]["_contributors"]
         except:
@@ -173,9 +172,9 @@ class Song():
         try:
             with open(os.path.join(songpath, "metadata.dat"), "r", encoding="utf8") as f:
                 metadata = json.load(f)
-            self.hash = metadata["hash"]
+            self.hash = metadata["hash"].lower()
         except:
-            self.hash = sha1(self.__diff_files)
+            self.hash = sha1(files_to_hash).lower()
             print(self.hash)
     pass
 
@@ -212,8 +211,6 @@ def updatePlaylists(playlistspath):
             if not success:
                 playlistnames.append(filenames[index])
                 pl.title_ext = filenames[index]
-        global queue
-        pl.addtoqueue(queue)
 
     playlistupdatelist = []
     for i in playlistnames:
@@ -229,33 +226,6 @@ def updatePlaylists(playlistspath):
     return playlists, filenames, playlistnames
 
 
-def queueToTop(playlistname_ext):
-    global queueprioritylist
-    try:
-        queueprioritylist.insert(0, queueprioritylist.pop(queueprioritylist.index(playlistname_ext)))
-    except ValueError:
-        queueprioritylist.append(playlistname_ext)
-        queueprioritylist.insert(0, queueprioritylist.pop(queueprioritylist.index(playlistname_ext)))
-
-def queuefunc(currentqueue, queue: dict, playlist: object):
-    try:
-        songhash = playlist.requestlist.pop(0)
-    except IndexError:
-        raise EmptyRequestError()
-    url = f"https://beatsaver.com/api/maps/by-hash/{songhash}"
-    text = requests.get(url, headers=headers).text
-    songdata = json.loads(text)
-    playlist.songs[songhash]["songName"] = songdata["metadata"]["songName"]
-    playlist.songs[songhash]["downloadURL"] = songdata["downloadURL"]
-    playlist.songs[songhash]["key"] = songdata["key"]
-    playlist.songs[songhash]["coverURL"] = songdata["coverURL"]
-
-    print("Loaded "+songdata["metadata"]["songName"])
-    try:
-        if currentplaylist == playlist:
-            updateNames(playlist)
-    except:
-        pass
 
 def loadsongs(songspath):
     dirs = [os.path.join(songspath, item) for item in os.listdir(songspath) if os.path.isdir(os.path.join(songspath, item))]
@@ -268,10 +238,9 @@ def loadsongs(songspath):
             songsdict[song.hash] = song
             #print(songsdict)
         except Exception as e:
+            print(songpath)
             print(e)
-        print(f"\r{counter}/{totalsongs}")
-            
-loadsongs(songspath)
+        #print(f"\r{counter}/{totalsongs}")
 
 
 playlisttable_headings = ["Playlist Name", "Header2"]
@@ -348,47 +317,6 @@ window = sg.Window("BS Playlist Editor", layout, finalize=True)
 
 window["-FOLDER-"].update(playlistspath)
 
-print(f"before init {queueactive}")
-if playlistspath:
-    playlists, filenames, playlistnames = updatePlaylists(playlistspath)
-print(f"after init {queueactive}")
-
-def runQueue():
-    global queueactive
-    global queueprioritylist
-    while True:
-        if queueactive:
-            if not bool(queue):
-                queueactive = False
-            print(f"queue: {queue}")
-            print(f"queueactive: {queueactive}\nqueueprioritylist: {queueprioritylist}")
-            try:
-                queuetop = queueprioritylist[0]
-                currentqueue = queue[queuetop]
-                queueplaylist = playlists[playlistnames.index(queueprioritylist[0])]
-            except Exception:
-                #raise
-                pass
-                #print(e)
-            try:
-                queuefunc(currentqueue, queue, queueplaylist)
-            except EmptyRequestError:
-                #raise
-                if bool(queueprioritylist):
-                    queueprioritylist.pop(0)
-                if bool(queue):
-                    queue.pop(queuetop)
-            except Exception as e:
-                #raise
-                print(e)
-                pass
-            if len(queueprioritylist) == 0:
-                if bool(queue):
-                    print("got here")
-                    for key in queue:
-                        queueToTop(key)
-                        break
-
 
 def updateNames(playlist):
     #print("updatenames")
@@ -412,7 +340,9 @@ def resetUI():
 updatePlInfoMsg(0)
 
 selectedsong = False
-threading.Thread(target=runQueue, daemon=True).start()
+
+loadsongs(songspath)
+loadPlaylists(playlistspath)
 while True:
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
@@ -423,11 +353,9 @@ while True:
             resetLayout()
             updatePlInfoMsg(1)
         elif len(selectedplaylists) == 1:
-            queueactive = True
             setLayoutSonglist()
             currentplaylist = playlists[selectedplaylists[0]]
             updateNames(currentplaylist)
-            queueToTop(playlistnames[selectedplaylists[0]])
     
     if event == "-DELETE PLAYLISTS-":
         try:
