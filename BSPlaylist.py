@@ -68,13 +68,6 @@ songspath = f"{path}Beat Saber_Data\\CustomLevels"
 # NB! need to make sure program works if path detection fails
 
 
-class EmptyRequestError(Exception):
-        def __init__(self, errors=""):
-            super().__init__()
-            self.errors = errors
-            if bool(self.errors):
-                print(f"Errors: {errors}")
-
 
 class Playlist:
     def __init__(self, filepath):
@@ -104,26 +97,24 @@ class Playlist:
                     "songName": songsdict[songhash].name
                 }
             except:
-                print(filepath)
-                print(songhash)
+                hashes[songhash] = {
+                    "hash": songhash,
+                    "songName": "NOT DOWNLOADED"
+                }
 
         self.songs = hashes
         
     def getData(self):
         namelist = []
-        for song in self.songs:
-            namelist.append(song["songName"])
+        for songhash in self.songs:
+            namelist.append(self.songs[songhash]["songName"])
         return namelist
     
     def getNames(self):
-        self.getData()
+        return self.getData()
 
     def remove(self, songhash):
         self.songs.pop(songhash)
-        try:
-            self.requestlist.pop(songhash)
-        except:
-            pass
 
     def save(self):
         print("saved")
@@ -161,8 +152,9 @@ class Song():
         songfilename = info["_songFilename"]
         coverimagefilename = info["_coverImageFilename"]
         self.diff_files = []
-        for diff in info["_difficultyBeatmapSets"][0]["_difficultyBeatmaps"]:
-            self.diff_files.append(os.path.join(songpath, diff["_beatmapFilename"]))
+        for difftype in info["_difficultyBeatmapSets"]:
+            for diff in difftype["_difficultyBeatmaps"]:
+                self.diff_files.append(os.path.join(songpath, diff["_beatmapFilename"]))
         files_to_hash = [item for item in self.diff_files]
         files_to_hash.insert(0, os.path.join(songpath, "Info.dat"))
         try:
@@ -175,6 +167,7 @@ class Song():
             self.hash = metadata["hash"].lower()
         except:
             self.hash = sha1(files_to_hash).lower()
+            print(files_to_hash)
             print(self.hash)
     pass
 
@@ -187,7 +180,6 @@ def loadPlaylists(playlistspath):
     filenames = []
     for root, dirs, files in os.walk(playlistspath):
         for filename in files:
-            #print(os.path.join(root, filename))
             playlistpath = os.path.join(root, filename)
             playlists.append(Playlist(playlistpath))
             filenames.append(filename)
@@ -195,6 +187,7 @@ def loadPlaylists(playlistspath):
 
 def updatePlaylists(playlistspath):
     playlists, filenames = loadPlaylists(playlistspath)
+    print(playlists[0].title)
     playlistnames = []
     for index, pl in enumerate(playlists):
         if pl.title not in playlistnames:
@@ -342,7 +335,7 @@ updatePlInfoMsg(0)
 selectedsong = False
 
 loadsongs(songspath)
-loadPlaylists(playlistspath)
+playlists, filenames, playlistnames = updatePlaylists(playlistspath)
 while True:
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
@@ -366,11 +359,11 @@ while True:
             pass
         else:
             resetUI()
-            updatePlaylists(playlistspath)
+            playlists, filenames, playlistnames = updatePlaylists(playlistspath)
     
     if event == "-RELOAD-":
         resetUI()
-        updatePlaylists(playlistspath)
+        playlists, filenames, playlistnames = updatePlaylists(playlistspath)
         
 
 window.close()
