@@ -6,6 +6,7 @@ import json
 import requests
 import PySimpleGUI as sg
 import threading
+import hashlib
 
 
 # global variables start
@@ -23,6 +24,15 @@ PlInfoMsgDict = {
     1: "Please only select 1 playlist"
 }
 songsdict = {}
+
+
+def sha1(fnames):
+    hash_sha1 = hashlib.sha1()
+    for fname in fnames:
+        with open(fname, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_sha1.update(chunk)
+    return hash_sha1.hexdigest()
 
 def get_steam_path():
     
@@ -145,9 +155,6 @@ class Playlist:
 
 class Song():
     def __init__(self, songpath):
-        with open(os.path.join(songpath, "metadata.dat"), "r", encoding="utf8") as f:
-            metadata = json.load(f)
-        self.hash = metadata["hash"]
         with open(os.path.join(songpath, "info.dat"), "r", encoding="utf8") as f:
             info = json.load(f)
         self.name = info["_songName"]
@@ -156,11 +163,20 @@ class Song():
         self.bpm = info["_beatsPerMinute"]
         songfilename = info["_songFilename"]
         coverimagefilename = info["_coverImageFilename"]
+        self.__diff_files = []
+        for diff in info["_difficultyBeatmapSets"][0]["_difficultyBeatmaps"]:
+            self.__diff_files.append(os.path.join(songpath, diff["_beatmapFilename"]))
         try:
             self.contributors = info["_customData"]["_contributors"]
         except:
             pass
-        
+        try:
+            with open(os.path.join(songpath, "metadata.dat"), "r", encoding="utf8") as f:
+                metadata = json.load(f)
+            self.hash = metadata["hash"]
+        except:
+            self.hash = sha1(self.__diff_files)
+            print(self.hash)
     pass
 
     
@@ -242,13 +258,18 @@ def queuefunc(currentqueue, queue: dict, playlist: object):
         pass
 
 def loadsongs(songspath):
-    for root, dirs, files in os.walk(songspath):
-        for filename in files:
-            #print(os.path.join(root, filename))
-            songpath = os.path.join(root, filename)
+    dirs = [os.path.join(songspath, item) for item in os.listdir(songspath) if os.path.isdir(os.path.join(songspath, item))]
+    totalsongs = len(dirs)
+    for counter, songdir in enumerate(dirs):
+        songpath = os.path.join(songspath, songdir)
+        #print(songpath)
+        try:
             song = Song(songpath)
             songsdict[song.hash] = song
-            print(songsdict)
+            #print(songsdict)
+        except Exception as e:
+            print(e)
+        print(f"\r{counter}/{totalsongs}")
             
 loadsongs(songspath)
 
