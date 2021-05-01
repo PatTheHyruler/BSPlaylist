@@ -178,11 +178,11 @@ def loadPlaylists(playlistspath):
     and shouldn't need to be used on its own."""
     playlists = []
     filenames = []
-    for root, dirs, files in os.walk(playlistspath):
-        for filename in files:
-            playlistpath = os.path.join(root, filename)
-            playlists.append(Playlist(playlistpath))
-            filenames.append(filename)
+    playlistfiles = [os.path.join(playlistspath, item) for item in os.listdir(playlistspath) if os.path.isfile(os.path.join(playlistspath, item))]
+    for filename in playlistfiles:
+        playlistpath = os.path.join(playlistspath, filename)
+        playlists.append(Playlist(playlistpath))
+        filenames.append(filename)
     return playlists, filenames
 
 def updatePlaylists(playlistspath):
