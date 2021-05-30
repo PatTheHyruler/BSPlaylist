@@ -1,13 +1,12 @@
-import platform
-import os
-import winreg
-import ast
 import json
+import os
 import requests
 import PySimpleGUI as sg
 import threading
-import hashlib
-
+from src.utils import get_game_path, get_steam_path
+from src.funcs import updatePlaylists, loadsongs
+from src.playlist import Playlist
+from src.song import Song
 
 # global variables start
 headers = {
@@ -22,45 +21,6 @@ PlInfoMsgDict = {
 }
 # global variables end
 
-def sha1(fnames):
-    hash_sha1 = hashlib.sha1()
-    for fname in fnames:
-        with open(fname, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                hash_sha1.update(chunk)
-    return hash_sha1.hexdigest()
-
-def get_steam_path():
-    
-    if platform.system() == "Windows":
-        """Get Steam install location from the Windows registry"""
-        try:
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                                "SOFTWARE\\WOW6432Node\\Valve\\Steam")
-            value = winreg.QueryValueEx(key, "InstallPath")[0]
-            return value
-        except:
-            print("Couldn't locate Steam.")
-    elif platform.system() == "Linux":
-        print("Automatic Steam location detection not supported on Linux, sorry.")
-
-def get_game_path(steampath):
-    """Scan through every Steam library and try to find a Beat Saber installation"""
-    try:
-        gamepaths = [f"{steampath}"]
-        with open(f"{steampath}\\steamapps\\libraryfolders.vdf", "r") as f:
-            for l in f:
-                # If is an absolute path with a drive letter (eg "D:\\Games")
-                if ":\\\\" in l:
-                    gamepaths.append(ast.literal_eval("\""+l.split("\t")[-1][1:-2]+"\""))
-        for gamepath in gamepaths:
-            if (os.path.isfile(f"{gamepath}\\steamapps\\appmanifest_620980.acf")):
-                return f"{gamepath}\\steamapps\\common\\Beat Saber\\"
-        raise Exception("Couldn't locate Beat Saber")
-    except:
-        print("Couldn't locate Beat Saber.")
-
-
 steampath = get_steam_path()
 path = get_game_path(steampath)
 playlistspath = f"{path}Playlists"
@@ -68,172 +28,6 @@ songspath = f"{path}Beat Saber_Data\\CustomLevels"
 # NB! need to make sure program works if path detection fails
 
 
-
-class Playlist:
-    def __init__(self, filepath):
-        with open(filepath, encoding="utf8") as f:
-            playlist = json.load(f)
-        
-        self.filepath = filepath
-        self.deleted = False
-        self.raw = playlist
-        self.title = playlist["playlistTitle"]
-        self.title_ext = self.title
-        self.author = playlist["playlistAuthor"]
-        try:
-            self.description = playlist["playlistDescription"]
-        except:
-            self.description = ""
-
-        global songsdict
-        __initsongs = playlist["songs"]
-        hashes = {}
-        for song in __initsongs:
-            songhash = song["hash"].lower()
-            
-            try:
-                hashes[songhash] = {
-                    "hash": songhash,
-                    "songName": songsdict[songhash].name
-                }
-            except:
-                hashes[songhash] = {
-                    "hash": songhash,
-                    "songName": "NOT DOWNLOADED"
-                }
-
-        self.songs = hashes
-        
-    def getData(self):
-        namelist = []
-        for songhash in self.songs:
-            namelist.append(self.songs[songhash]["songName"])
-        return namelist
-    
-    def getNames(self):
-        return self.getData()
-
-    def remove(self, songhash):
-        self.songs.pop(songhash)
-
-    def save(self):
-        print("saved")
-        writedict = {}
-        writedict["playlistTitle"] = self.title
-        writedict["playlistAuthor"] = self.author
-        if self.description:
-            writedict["playlistDescription"] = self.description
-        writedict["songs"] = []
-        for song in self.songs:
-            writedict["songs"].append({"hash": song})
-        with open(self.filepath, "w") as f:
-            json.dump(writedict, f)
-            self.deleted = False
-            pass
-
-    def delete(self):
-        if os.path.exists(self.filepath):
-            os.remove(self.filepath)
-            self.deleted = True
-
-    def add(self, songhash):
-        self.songs[songhash] = {"hash": songhash}
-        self.save()
-
-
-class Song():
-    def __init__(self, songpath):
-        with open(os.path.join(songpath, "info.dat"), "r", encoding="utf8") as f:
-            info = json.load(f)
-        self.name = info["_songName"]
-        self.subname = info["_songSubName"]
-        self.author = info["_levelAuthorName"]
-        self.bpm = info["_beatsPerMinute"]
-        songfilename = info["_songFilename"]
-        coverimagefilename = info["_coverImageFilename"]
-        self.diff_files = []
-        for difftype in info["_difficultyBeatmapSets"]:
-            for diff in difftype["_difficultyBeatmaps"]:
-                self.diff_files.append(os.path.join(songpath, diff["_beatmapFilename"]))
-        files_to_hash = [item for item in self.diff_files]
-        files_to_hash.insert(0, os.path.join(songpath, "Info.dat"))
-        try:
-            self.contributors = info["_customData"]["_contributors"]
-        except:
-            pass
-        try:
-            with open(os.path.join(songpath, "metadata.dat"), "r", encoding="utf8") as f:
-                metadata = json.load(f)
-            self.hash = metadata["hash"].lower()
-        except:
-            self.hash = sha1(files_to_hash).lower()
-            print(files_to_hash)
-            print(self.hash)
-    pass
-
-    
-
-def loadPlaylists(playlistspath):
-    """This function just gets called by updatePlaylists()
-    and shouldn't need to be used on its own."""
-    playlists = []
-    filenames = []
-    playlistfiles = [os.path.join(playlistspath, item) for item in os.listdir(playlistspath) if os.path.isfile(os.path.join(playlistspath, item))]
-    for filename in playlistfiles:
-        playlistpath = os.path.join(playlistspath, filename)
-        playlists.append(Playlist(playlistpath))
-        filenames.append(filename)
-    return playlists, filenames
-
-def updatePlaylists(playlistspath):
-    playlists, filenames = loadPlaylists(playlistspath)
-    print(playlists[0].title)
-    playlistnames = []
-    for index, pl in enumerate(playlists):
-        if pl.title not in playlistnames:
-            playlistnames.append(pl.title)
-        else:
-            success = False
-            for i in range(10):
-                testname = f"{pl.title} - Copy {i+1}"
-                if testname not in playlistnames:
-                    playlistnames.append(testname)
-                    pl.title_ext = testname
-                    success = True
-                    break
-            if not success:
-                playlistnames.append(filenames[index])
-                pl.title_ext = filenames[index]
-
-    playlistupdatelist = []
-    for i in playlistnames:
-        playlistupdatelist.append([i, "testtest"])
-
-    #window.Element("-PLAYLISTS TABLE-").Update(values=playlistupdatelist)
-    window["-PLAYLISTS TABLE-"].update(values=playlistupdatelist)
-
-    # playlists - list of instances of Playlist class
-    # filenames - list of filenames of playlists
-    # playlistnames - list of modified playlist names (to deal with potential duplicate names)
-    # all 3 lists ordered the same
-    return playlists, filenames, playlistnames
-
-
-
-def loadsongs(songspath):
-    dirs = [os.path.join(songspath, item) for item in os.listdir(songspath) if os.path.isdir(os.path.join(songspath, item))]
-    totalsongs = len(dirs)
-    for counter, songdir in enumerate(dirs):
-        songpath = os.path.join(songspath, songdir)
-        #print(songpath)
-        try:
-            song = Song(songpath)
-            songsdict[song.hash] = song
-            #print(songsdict)
-        except Exception as e:
-            print(songpath)
-            print(e)
-        #print(f"\r{counter}/{totalsongs}")
 
 
 playlisttable_headings = ["Playlist Name", "Header2"]
@@ -334,8 +128,8 @@ updatePlInfoMsg(0)
 
 selectedsong = False
 
-loadsongs(songspath)
-playlists, filenames, playlistnames = updatePlaylists(playlistspath)
+loadsongs(songspath, songsdict)
+playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
 while True:
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
@@ -359,11 +153,11 @@ while True:
             pass
         else:
             resetUI()
-            playlists, filenames, playlistnames = updatePlaylists(playlistspath)
+            playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
     
     if event == "-RELOAD-":
         resetUI()
-        playlists, filenames, playlistnames = updatePlaylists(playlistspath)
+        playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
         
 
 window.close()
