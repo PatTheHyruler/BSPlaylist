@@ -41,3 +41,7 @@ def get_game_path(steampath):
         raise Exception("Couldn't locate Beat Saber")
     except:
         print("Couldn't locate Beat Saber.")
+
+class WindowClosedError(Exception):
+    """Raised when program window is closed"""
+    pass

@@ -2,11 +2,12 @@ import json
 import os
 import requests
 import PySimpleGUI as sg
-import threading
-from src.utils import get_game_path, get_steam_path
+from src.utils import get_game_path, get_steam_path, WindowClosedError
 from src.funcs import updatePlaylists, loadsongs
 from src.playlist import Playlist
 from src.song import Song
+from src.GUI import GUIloop
+from src.GUIutils import *
 
 # global variables start
 headers = {
@@ -15,11 +16,7 @@ headers = {
     'accept-language': 'en-US,en;q=0.9,et;q=0.8',
 }
 songsdict = {}
-PlInfoMsgDict = {
-    0: "Choose a playlist from the panel to the left",
-    1: "Please only select 1 playlist"
-}
-# global variables end
+
 
 steampath = get_steam_path()
 path = get_game_path(steampath)
@@ -57,7 +54,7 @@ playlist_column = [
 ]
 
 song_list_text = [
-    [sg.Text(text=PlInfoMsgDict[0],key="-PL INFOMSG-")]
+    [sg.Text(text=PlInfoMsgDict[str(0)],key="-PL INFOMSG-")]
 ]
 
 songlisttable_headings = ["Song name", "add more columns later"]
@@ -105,60 +102,19 @@ window = sg.Window("BS Playlist Editor", layout, finalize=True)
 window["-FOLDER-"].update(playlistspath)
 
 
-def updateNames(playlist):
-    #print("updatenames")
-    songupdatelist = []
-    for i in playlist.getNames():
-        songupdatelist.append([i, "placeholder"])
-    window["-SONG TABLE-"].update(values=songupdatelist)
 
-def setLayoutSonglist():
-    window[f'-COL1-'].update(visible=False)
-    window[f'-COL2-'].update(visible=True)
-def resetLayout():
-    window[f'-COL1-'].update(visible=True)
-    window[f'-COL2-'].update(visible=False)
-def updatePlInfoMsg(index, PlInfoMsgDict=PlInfoMsgDict):
-    window["-PL INFOMSG-"].update(PlInfoMsgDict[index])
-def resetUI():
-    updatePlInfoMsg(0)
-    resetLayout()
 
-updatePlInfoMsg(0)
+updatePlInfoMsg(window,0)
 
 selectedsong = False
 
 loadsongs(songspath, songsdict)
 playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
 while True:
-    event, values = window.read()
-    if event == "Exit" or event == sg.WIN_CLOSED:
+    try:
+        GUIloop(window,playlists,playlistspath,songsdict)
+    except WindowClosedError:
         break
-    if event == "-PLAYLISTS TABLE-":
-        selectedplaylists = values["-PLAYLISTS TABLE-"]
-        if len(selectedplaylists) > 1:
-            resetLayout()
-            updatePlInfoMsg(1)
-        elif len(selectedplaylists) == 1:
-            setLayoutSonglist()
-            currentplaylist = playlists[selectedplaylists[0]]
-            updateNames(currentplaylist)
-    
-    if event == "-DELETE PLAYLISTS-":
-        try:
-            for index in selectedplaylists:
-                playlists[index].delete()
-        except:
-            print("could not delete playlist")
-            pass
-        else:
-            resetUI()
-            playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
-    
-    if event == "-RELOAD-":
-        resetUI()
-        playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
-        
 
 window.close()
 
