@@ -49,7 +49,8 @@ playlist_column = [
             justification='center',
             key="-PLAYLISTS TABLE-"
         ),
-        sg.Button("Delete selected playlist(s)", key="-DELETE PLAYLISTS-")
+        sg.Button("Delete selected playlist(s)", key="-DELETE PLAYLISTS-"),
+        sg.Button("Duplicate selected playlist", key="-DUPLICATE PLAYLISTS-")
     ],
 ]
 
@@ -101,20 +102,19 @@ window = sg.Window("BS Playlist Editor", layout, finalize=True)
 
 window["-FOLDER-"].update(playlistspath)
 
-
-
-
 updatePlInfoMsg(window,0)
 
 selectedsong = False
 
 loadsongs(songspath, songsdict)
 playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
+
+selectedplaylists = []
 while True:
     try:
-        GUIloop(window,playlists,playlistspath,songsdict)
+        print(f"selectedplaylists: {selectedplaylists}")
+        selectedplaylists = GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists)
     except WindowClosedError:
         break
 
 window.close()
-
