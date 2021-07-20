@@ -4,6 +4,8 @@ import PySimpleGUI as sg
 from src.utils import WindowClosedError
 from copy import deepcopy
 import os
+from src.beatsaver import BeatSaver
+from src.bsr import Bsr
 
 def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
     event, values = window.read()
@@ -18,7 +20,6 @@ def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
             setLayoutSonglist(window)
             currentplaylist = playlists[selectedplaylists[0]]
             updateNames(window,currentplaylist)
-
     if event == "-DELETE PLAYLISTS-":
         try:
             for index in selectedplaylists:
@@ -53,7 +54,19 @@ def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
         except:
             print("could not duplicate playlist")
             pass
-    
+
+    if event == "-ADD BSR-":
+        currentplaylists = [playlists[index] for index in selectedplaylists]
+        bsrlist = Bsr.interpret(values["-ADD BSR INPUT-"])
+        hashlist = [hash for hash in [BeatSaver.get_hash_by_key(bsr) for bsr in bsrlist] if hash is not None]
+        if len(hashlist) > 0:
+            for playlist in currentplaylists:
+                playlist.add_multiple(hashlist, songsdict)
+            resetUI(window)
+            playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
+        else:
+            sg.popup_ok("No compatible bsr key in textbox!", title="ERROR!")
+
     if event == "-RELOAD-":
         resetUI(window)
         playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)

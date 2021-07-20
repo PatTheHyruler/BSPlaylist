@@ -16,25 +16,27 @@ class Playlist:
             self.description = playlist["playlistDescription"]
         except:
             self.description = ""
+        self.songs = {}
 
         __initsongs = playlist["songs"]
-        hashes = {}
         for song in __initsongs:
             songhash = song["hash"].lower()
-            
-            try:
-                hashes[songhash] = {
-                    "hash": songhash,
-                    "songName": songsdict[songhash].name
-                }
-            except:
-                hashes[songhash] = {
-                    "hash": songhash,
-                    "songName": "NOT DOWNLOADED"
-                }
 
-        self.songs = hashes
-        
+            self._initsong(songhash, songsdict)
+
+    def _initsong(self, songhash, songsdict):
+        try:
+            self.songs[songhash] = {
+                "hash": songhash,
+                "songName": songsdict[songhash].name
+            }
+        except:
+            self.songs[songhash] = {
+                "hash": songhash,
+                "songName": "NOT DOWNLOADED"
+            }
+
+
     def getData(self):
         namelist = []
         for songhash in self.songs:
@@ -67,6 +69,12 @@ class Playlist:
             os.remove(self.filepath)
             self.deleted = True
 
-    def add(self, songhash):
-        self.songs[songhash] = {"hash": songhash}
+    def add(self, songhash, songsdict):
+        if songhash in self.songs:
+            return
+        self._initsong(songhash, songsdict)
         self.save()
+
+    def add_multiple(self, songhash_list, songsdict):
+        for songhash in songhash_list:
+            self.add(songhash, songsdict)

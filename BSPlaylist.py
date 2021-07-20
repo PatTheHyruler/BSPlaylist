@@ -49,9 +49,20 @@ playlist_column = [
             justification='center',
             key="-PLAYLISTS TABLE-"
         ),
-        sg.Button("Delete selected playlist(s)", key="-DELETE PLAYLISTS-"),
-        sg.Button("Duplicate selected playlist", key="-DUPLICATE PLAYLISTS-")
     ],
+]
+playlist_actions_column = [
+    [
+        sg.Button("Delete selected playlist(s)", key="-DELETE PLAYLISTS-")
+    ],
+    [
+        sg.Button("Duplicate selected playlist", key="-DUPLICATE PLAYLISTS-")
+    ]
+    ,
+    [
+        sg.Input("", tooltip="add bsr codes here, separated by commas", size=(13,10), key="-ADD BSR INPUT-"),
+        sg.Button("Add bsr", key="-ADD BSR-")
+    ]
 ]
 
 song_list_text = [
@@ -91,6 +102,7 @@ layout2 = [
 layout = [
     [
         sg.Column(playlist_column),
+        sg.Column(playlist_actions_column),
         sg.VSeparator(),
         sg.Column(layout1, key='-COL1-'),
         sg.Column(layout2, visible=False, key='-COL2-')
