@@ -2,20 +2,23 @@ import os
 from src.playlist import Playlist
 from src.song import Song
 
-def loadPlaylists(playlistspath, songsdict):
-    """This function just gets called by updatePlaylists()
+
+def loadplaylists(playlistspath, songsdict):
+    """This function just gets called by updateplaylists()
     and shouldn't need to be used on its own."""
     playlists = []
     filenames = []
-    playlistfiles = [os.path.join(playlistspath, item) for item in os.listdir(playlistspath) if os.path.isfile(os.path.join(playlistspath, item))]
+    playlistfiles = [os.path.join(playlistspath, item) for item in os.listdir(playlistspath)
+                     if os.path.isfile(os.path.join(playlistspath, item))]
     for filename in playlistfiles:
         playlistpath = os.path.join(playlistspath, filename)
         playlists.append(Playlist(playlistpath, songsdict))
         filenames.append(filename)
     return playlists, filenames
 
-def updatePlaylists(playlistspath, window, songsdict):
-    playlists, filenames = loadPlaylists(playlistspath, songsdict)
+
+def updateplaylists(playlistspath, window, songsdict):
+    playlists, filenames = loadplaylists(playlistspath, songsdict)
     print(playlists[0].title)
     playlistnames = []
     for index, pl in enumerate(playlists):
@@ -38,7 +41,7 @@ def updatePlaylists(playlistspath, window, songsdict):
     for i in playlistnames:
         playlistupdatelist.append([i, "testtest"])
 
-    #window.Element("-PLAYLISTS TABLE-").Update(values=playlistupdatelist)
+    # window.Element("-PLAYLISTS TABLE-").Update(values=playlistupdatelist)
     window["-PLAYLISTS TABLE-"].update(values=playlistupdatelist)
 
     # playlists - list of instances of Playlist class
@@ -54,15 +57,14 @@ def clear(*args):
 
 
 def loadsongs(songspath, songsdict):
-    dirs = [os.path.join(songspath, item) for item in os.listdir(songspath) if os.path.isdir(os.path.join(songspath, item))]
+    dirs = [os.path.join(songspath, item) for item in os.listdir(songspath)
+            if os.path.isdir(os.path.join(songspath, item))]
     totalsongs = len(dirs)
     for counter, songdir in enumerate(dirs):
         songpath = os.path.join(songspath, songdir)
-        #print(songpath)
         try:
             song = Song(songpath)
             songsdict[song.hash] = song
         except Exception as e:
             print(songpath)
             print(e)
-        #print(f"\r{counter}/{totalsongs}")

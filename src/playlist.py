@@ -1,6 +1,7 @@
 import json
 import os
 
+
 class Playlist:
     def __init__(self, filepath, songsdict):
         with open(filepath, encoding="utf8") as f:
@@ -36,24 +37,24 @@ class Playlist:
                 "songName": "NOT DOWNLOADED"
             }
 
-
-    def getData(self):
+    def get_data(self):
         namelist = []
         for songhash in self.songs:
             namelist.append(self.songs[songhash]["songName"])
         return namelist
     
-    def getNames(self):
-        return self.getData()
+    def get_names(self):
+        return self.get_data()
 
     def remove(self, songhash):
         self.songs.pop(songhash)
 
     def save(self):
         print("saved")
-        writedict = {}
-        writedict["playlistTitle"] = self.title
-        writedict["playlistAuthor"] = self.author
+        writedict = {
+            "playlistTitle": self.title,
+            "playlistAuthor": self.author
+        }
         if self.description:
             writedict["playlistDescription"] = self.description
         writedict["songs"] = []

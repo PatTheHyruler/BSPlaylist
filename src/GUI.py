@@ -1,5 +1,5 @@
 from src.GUIutils import *
-from src.funcs import updatePlaylists, clear
+from src.funcs import updateplaylists, clear
 import PySimpleGUI as sg
 from src.utils import WindowClosedError
 from copy import deepcopy
@@ -7,7 +7,8 @@ import os
 from src.beatsaver import BeatSaver
 from src.bsr import Bsr
 
-def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
+
+def gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists):
     event, values = window.read()
     filenames = playlistnames = []
     if event == "Exit" or event == sg.WIN_CLOSED:
@@ -15,12 +16,12 @@ def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
     if event == "-PLAYLISTS TABLE-":
         selectedplaylists = values["-PLAYLISTS TABLE-"]
         if len(selectedplaylists) > 1:
-            resetLayout(window)
-            updatePlInfoMsg(window,1)
+            reset_layout(window)
+            update_pl_info_msg(window, 1)
         elif len(selectedplaylists) == 1:
-            setLayoutSonglist(window)
+            set_layout_song_list(window)
             currentplaylist = playlists[selectedplaylists[0]]
-            updateNames(window, currentplaylist)
+            update_names(window, currentplaylist)
     if event == "-DELETE PLAYLISTS-":
         try:
             for index in selectedplaylists:
@@ -33,8 +34,8 @@ def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
             # However, functionality could be added where the refresh isn't automatic,
             # and thus a "deleted" playlist would still be stored in memory.
             clear(playlists, filenames, playlistnames)
-            resetUI(window)
-            playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
+            reset_ui(window)
+            playlists, filenames, playlistnames = updateplaylists(playlistspath, window, songsdict)
     
     if event == "-DUPLICATE PLAYLISTS-":
         try:
@@ -50,8 +51,8 @@ def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
                         success = True
                     if success:
                         clear(playlists, filenames, playlistnames)
-                        playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
-                        resetUI(window)
+                        playlists, filenames, playlistnames = updateplaylists(playlistspath, window, songsdict)
+                        reset_ui(window)
                         break
                 del newplaylist, filepath_base, filepath
         except:
@@ -61,19 +62,20 @@ def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
     if event == "-ADD BSR-":
         currentplaylists = [playlists[index] for index in selectedplaylists]
         bsrlist = Bsr.interpret(values["-ADD BSR INPUT-"])
-        hashlist = [hash for hash in [BeatSaver.get_hash_by_key(bsr) for bsr in bsrlist] if hash is not None]
+        hashlist = [songhash for songhash in [BeatSaver.get_hash_by_key(bsr) for bsr in bsrlist]
+                    if songhash is not None]
         if len(hashlist) > 0:
             for playlist in currentplaylists:
                 playlist.add_multiple(hashlist, songsdict)
-            resetUI(window)
+            reset_ui(window)
             clear(playlists, filenames, playlistnames)
-            playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
+            playlists, filenames, playlistnames = updateplaylists(playlistspath, window, songsdict)
         else:
             sg.popup_ok("No compatible bsr key in textbox!", title="ERROR!")
 
     if event == "-RELOAD-":
-        resetUI(window)
+        reset_ui(window)
         clear(playlists, filenames, playlistnames)
-        playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
+        playlists, filenames, playlistnames = updateplaylists(playlistspath, window, songsdict)
 
     return selectedplaylists, playlists

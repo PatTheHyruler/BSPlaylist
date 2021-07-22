@@ -1,20 +1,10 @@
-import json
-import os
-import requests
 import PySimpleGUI as sg
 from src.utils import get_game_path, get_steam_path, WindowClosedError
-from src.funcs import updatePlaylists, loadsongs
-from src.playlist import Playlist
-from src.song import Song
-from src.GUI import GUIloop
+from src.funcs import updateplaylists, loadsongs
+from src.GUI import gui_loop
 from src.GUIutils import *
 
 # global variables start
-headers = {
-    'authority': 'beatsaver.com',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
-    'accept-language': 'en-US,en;q=0.9,et;q=0.8',
-}
 songsdict = {}
 
 
@@ -23,8 +13,6 @@ path = get_game_path(steampath)
 playlistspath = f"{path}Playlists"
 songspath = f"{path}Beat Saber_Data\\CustomLevels"
 # NB! need to make sure program works if path detection fails
-
-
 
 
 playlisttable_headings = ["Playlist Name", "Header2"]
@@ -57,16 +45,15 @@ playlist_actions_column = [
     ],
     [
         sg.Button("Duplicate selected playlist", key="-DUPLICATE PLAYLISTS-")
-    ]
-    ,
+    ],
     [
-        sg.Input("", tooltip="add bsr codes here, separated by commas", size=(13,10), key="-ADD BSR INPUT-"),
+        sg.Input("", tooltip="add bsr codes here, separated by commas", size=(13, 10), key="-ADD BSR INPUT-"),
         sg.Button("Add bsr", key="-ADD BSR-")
     ]
 ]
 
 song_list_text = [
-    [sg.Text(text=PlInfoMsgDict[str(0)],key="-PL INFOMSG-")]
+    [sg.Text(text=PlInfoMsgDict[str(0)], key="-PL INFOMSG-")]
 ]
 
 songlisttable_headings = ["Song name", "add more columns later"]
@@ -114,19 +101,19 @@ window = sg.Window("BS Playlist Editor", layout, finalize=True)
 
 window["-FOLDER-"].update(playlistspath)
 
-updatePlInfoMsg(window,0)
+update_pl_info_msg(window, 0)
 
 selectedsong = False
 
 loadsongs(songspath, songsdict)
-playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
+playlists, filenames, playlistnames = updateplaylists(playlistspath, window, songsdict)
 
 selectedplaylists = []
 while True:
     try:
         print(f"selectedplaylists: {selectedplaylists}")
         print(f"playlists: {[playlist.title for playlist in playlists]}")
-        selectedplaylists, playlists = GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists)
+        selectedplaylists, playlists = gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists)
     except WindowClosedError:
         break
 

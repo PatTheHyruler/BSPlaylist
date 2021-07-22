@@ -2,7 +2,8 @@ import json
 import os
 from src.utils import sha1
 
-class Song():
+
+class Song:
     def __init__(self, songpath):
         with open(os.path.join(songpath, "info.dat"), "r", encoding="utf8") as f:
             info = json.load(f)
@@ -10,8 +11,8 @@ class Song():
         self.subname = info["_songSubName"]
         self.author = info["_levelAuthorName"]
         self.bpm = info["_beatsPerMinute"]
-        songfilename = info["_songFilename"]
-        coverimagefilename = info["_coverImageFilename"]
+        self._songfilename = info["_songFilename"]
+        self._coverimagefilename = info["_coverImageFilename"]
         self.diff_files = []
         for difftype in info["_difficultyBeatmapSets"]:
             for diff in difftype["_difficultyBeatmaps"]:
