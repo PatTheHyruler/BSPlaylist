@@ -48,6 +48,11 @@ def updatePlaylists(playlistspath, window, songsdict):
     return playlists, filenames, playlistnames
 
 
+def clear(*args):
+    for arg in args:
+        del arg
+
+
 def loadsongs(songspath, songsdict):
     dirs = [os.path.join(songspath, item) for item in os.listdir(songspath) if os.path.isdir(os.path.join(songspath, item))]
     totalsongs = len(dirs)

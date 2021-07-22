@@ -1,5 +1,5 @@
 from src.GUIutils import *
-from src.funcs import updatePlaylists
+from src.funcs import updatePlaylists, clear
 import PySimpleGUI as sg
 from src.utils import WindowClosedError
 from copy import deepcopy
@@ -9,6 +9,7 @@ from src.bsr import Bsr
 
 def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
     event, values = window.read()
+    filenames = playlistnames = []
     if event == "Exit" or event == sg.WIN_CLOSED:
         raise WindowClosedError
     if event == "-PLAYLISTS TABLE-":
@@ -19,7 +20,7 @@ def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
         elif len(selectedplaylists) == 1:
             setLayoutSonglist(window)
             currentplaylist = playlists[selectedplaylists[0]]
-            updateNames(window,currentplaylist)
+            updateNames(window, currentplaylist)
     if event == "-DELETE PLAYLISTS-":
         try:
             for index in selectedplaylists:
@@ -31,6 +32,7 @@ def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
             # Currently the program reloads playlists and UI when a playlist is deleted.
             # However, functionality could be added where the refresh isn't automatic,
             # and thus a "deleted" playlist would still be stored in memory.
+            clear(playlists, filenames, playlistnames)
             resetUI(window)
             playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
     
@@ -47,6 +49,7 @@ def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
                         newplaylist.save()
                         success = True
                     if success:
+                        clear(playlists, filenames, playlistnames)
                         playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
                         resetUI(window)
                         break
@@ -63,12 +66,14 @@ def GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists):
             for playlist in currentplaylists:
                 playlist.add_multiple(hashlist, songsdict)
             resetUI(window)
+            clear(playlists, filenames, playlistnames)
             playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
         else:
             sg.popup_ok("No compatible bsr key in textbox!", title="ERROR!")
 
     if event == "-RELOAD-":
         resetUI(window)
+        clear(playlists, filenames, playlistnames)
         playlists, filenames, playlistnames = updatePlaylists(playlistspath, window, songsdict)
-    
-    return selectedplaylists
+
+    return selectedplaylists, playlists

@@ -125,7 +125,8 @@ selectedplaylists = []
 while True:
     try:
         print(f"selectedplaylists: {selectedplaylists}")
-        selectedplaylists = GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists)
+        print(f"playlists: {[playlist.title for playlist in playlists]}")
+        selectedplaylists, playlists = GUIloop(window,playlists,playlistspath,songsdict,selectedplaylists)
     except WindowClosedError:
         break
 
