@@ -9,11 +9,34 @@ songsdict = {}
 
 
 steampath = get_steam_path()
-path = get_game_path(steampath)
-playlistspath = f"{path}Playlists"
-songspath = f"{path}Beat Saber_Data\\CustomLevels"
-# NB! need to make sure program works if path detection fails
+path = None
+if steampath is not None:
+    try:
+        path = get_game_path(steampath)
+    except:
+        pass
 
+if path is None:
+    path = sg.popup_get_folder("Please provide your Beat Saber folder path",
+                               title="Couldn't locate Beat Saber folder")
+
+if path is not None:
+    playlistspath = f"{path}Playlists"
+    songspath = f"{path}Beat Saber_Data\\CustomLevels"
+else:
+    playlistspath = sg.popup_get_folder(
+        "Please provide your playlists folder path",
+        title="No Beat Saber folder"
+    )
+    songspath = sg.popup_get_folder(
+        "Please provide your custom songs folder path",
+        title="No Beat Saber folder"
+    )
+
+if playlistspath is None:
+    quit("no playlistspath")
+elif songspath is None:
+    quit("no songspath")
 
 playlisttable_headings = ["Playlist Name", "Header2"]
 playlisttable_values = [["" for i in range(len(playlisttable_headings))]]

@@ -25,6 +25,7 @@ def get_steam_path():
             print("Couldn't locate Steam.")
     elif platform.system() == "Linux":
         print("Automatic Steam location detection not supported on Linux, sorry.")
+    return None
 
 
 def get_game_path(steampath):
