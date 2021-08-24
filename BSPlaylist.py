@@ -99,6 +99,15 @@ song_list = [
     ]
 ]
 
+songlist_actions_column = [
+    [
+        sg.Button("Remove selected song(s) from playlist", key="-REMOVE SONGS-")
+    ],
+    [
+        sg.Button("Delete selected song(s) from disk", key="-DELETE SONGS-")
+    ]
+]
+
 layout1 = [
     [
         sg.Column(song_list_text),
@@ -107,7 +116,8 @@ layout1 = [
 
 layout2 = [
     [
-        sg.Column(song_list, key="-SONG COLUMN-")
+        sg.Column(song_list, key="-SONG COLUMN-"),
+        sg.Column(songlist_actions_column)
     ]
 ]
 
@@ -134,20 +144,22 @@ loadsongs(songspath, songsdict)
 playlists, filenames, playlistnames = updateplaylists(playlistspath, window, songsdict)
 
 selectedplaylists = []
+selectedsongs = []
+playlist_songs = []
 
 
-async def run(window, playlists, playlistspath, songsdict, selectedplaylists):
+async def run(window, playlists, playlistspath, songsdict, selectedplaylists, selectedsongs, playlist_songs):
     while True:
         try:
             print(f"selectedplaylists: {selectedplaylists}")
-            print(f"playlists: {[playlist.title for playlist in playlists]}")
-            selectedplaylists, playlists = await gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists)
+            # print(f"playlists: {[playlist.title for playlist in playlists]}")
+            selectedplaylists, playlists, selectedsongs, playlist_songs = await gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists, selectedsongs, playlist_songs)
         except WindowClosedError:
             break
 
 
 loop = asyncio.get_event_loop()
-loop.run_until_complete(run(window, playlists, playlistspath, songsdict, selectedplaylists))
+loop.run_until_complete(run(window, playlists, playlistspath, songsdict, selectedplaylists, selectedsongs, playlist_songs))
 loop.close()
 
 window.close()

@@ -1,6 +1,11 @@
+from typing import List
+
 from src.GUIutils import *
-from src.funcs import updateplaylists, clear
+from src.funcs import updateplaylists, clear, get_playlist_songs
 import PySimpleGUI as sg
+
+from src.playlist import Playlist
+from src.song import Song
 from src.utils import WindowClosedError
 from copy import deepcopy
 import os
@@ -8,7 +13,7 @@ from src.beatsaver import BeatSaver
 from src.bsr import Bsr
 
 
-async def gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists):
+async def gui_loop(window, playlists: List[Playlist], playlistspath, songsdict, selectedplaylists, selectedsongs: List, playlist_songs: List[Song]):
     event, values = window.read()
     filenames = playlistnames = []
     if event == "Exit" or event == sg.WIN_CLOSED:
@@ -18,10 +23,25 @@ async def gui_loop(window, playlists, playlistspath, songsdict, selectedplaylist
         if len(selectedplaylists) > 1:
             reset_layout(window)
             update_pl_info_msg(window, 1)
+            selectedsongs.clear()
         elif len(selectedplaylists) == 1:
+            playlist_songs = get_playlist_songs(playlists[selectedplaylists[0]], window, songsdict)
             set_layout_song_list(window)
             currentplaylist = playlists[selectedplaylists[0]]
             update_names(window, currentplaylist)
+    if event == "-SONG TABLE-":
+        selectedsongs = values["-SONG TABLE-"]
+
+    if event == "-REMOVE SONGS-":
+        for index in selectedsongs:
+            songhash = playlist_songs[index].hash
+            playlist = playlists[selectedplaylists[0]]
+            playlist.remove(songhash)
+            playlist.save()
+            playlist_songs = get_playlist_songs(playlists[selectedplaylists[0]], window, songsdict)
+            set_layout_song_list(window)
+            # reset_ui(window)
+
     if event == "-DELETE PLAYLISTS-":
         try:
             for index in selectedplaylists:
@@ -54,8 +74,9 @@ async def gui_loop(window, playlists, playlistspath, songsdict, selectedplaylist
                         reset_ui(window)
                         break
                 del newplaylist, filepath_base, filepath
-        except:
-            print("could not duplicate playlist")
+        except Exception as e:
+            print("could not duplicate playlist: {e}")
+            raise
             pass
 
     if event == "-ADD BSR-":
@@ -74,6 +95,7 @@ async def gui_loop(window, playlists, playlistspath, songsdict, selectedplaylist
     if event == "-RELOAD-":
         reset_ui(window)
         clear(playlists, filenames, playlistnames)
+        selectedsongs.clear()
         playlists, filenames, playlistnames = updateplaylists(playlistspath, window, songsdict)
 
-    return (selectedplaylists, playlists)
+    return selectedplaylists, playlists, selectedsongs, playlist_songs

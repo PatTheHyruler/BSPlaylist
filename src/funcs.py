@@ -1,4 +1,6 @@
 import os
+from typing import List
+
 from src.playlist import Playlist
 from src.song import Song
 
@@ -49,6 +51,15 @@ def updateplaylists(playlistspath, window, songsdict):
     # playlistnames - list of modified playlist names (to deal with potential duplicate names)
     # all 3 lists ordered the same
     return playlists, filenames, playlistnames
+
+
+def get_playlist_songs(playlist: Playlist, window, songsdict) -> List[Song]:
+    songslist = []
+    for songhash in playlist.songs:
+        song = songsdict[songhash]
+        songslist.append(song)
+    window["-SONG TABLE-"].update(values=[song.name for song in songslist])
+    return songslist
 
 
 def clear(*args):
