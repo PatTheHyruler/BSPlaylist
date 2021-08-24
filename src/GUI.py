@@ -8,7 +8,7 @@ from src.beatsaver import BeatSaver
 from src.bsr import Bsr
 
 
-def gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists):
+async def gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists):
     event, values = window.read()
     filenames = playlistnames = []
     if event == "Exit" or event == sg.WIN_CLOSED:
@@ -28,7 +28,6 @@ def gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists):
                 playlists[index].delete()
         except:
             print("could not delete playlist")
-            pass
         else:
             # Currently the program reloads playlists and UI when a playlist is deleted.
             # However, functionality could be added where the refresh isn't automatic,
@@ -62,8 +61,7 @@ def gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists):
     if event == "-ADD BSR-":
         currentplaylists = [playlists[index] for index in selectedplaylists]
         bsrlist = Bsr.interpret(values["-ADD BSR INPUT-"])
-        hashlist = [songhash for songhash in [BeatSaver.get_hash_by_key(bsr) for bsr in bsrlist]
-                    if songhash is not None]
+        hashlist = [await BeatSaver.get_hash_by_key(bsr) for bsr in bsrlist]
         if len(hashlist) > 0:
             for playlist in currentplaylists:
                 playlist.add_multiple(hashlist, songsdict)
@@ -78,4 +76,4 @@ def gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists):
         clear(playlists, filenames, playlistnames)
         playlists, filenames, playlistnames = updateplaylists(playlistspath, window, songsdict)
 
-    return selectedplaylists, playlists
+    return (selectedplaylists, playlists)

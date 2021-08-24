@@ -4,6 +4,8 @@ from src.funcs import updateplaylists, loadsongs
 from src.GUI import gui_loop
 from src.GUIutils import *
 
+import asyncio
+
 # global variables start
 songsdict = {}
 
@@ -70,7 +72,7 @@ playlist_actions_column = [
         sg.Button("Duplicate selected playlist", key="-DUPLICATE PLAYLISTS-")
     ],
     [
-        sg.Input("", tooltip="add bsr codes here, separated by commas", size=(13, 10), key="-ADD BSR INPUT-"),
+        sg.Input("", tooltip="add bsr code here", size=(13, 10), key="-ADD BSR INPUT-"),
         sg.Button("Add bsr", key="-ADD BSR-")
     ]
 ]
@@ -132,12 +134,20 @@ loadsongs(songspath, songsdict)
 playlists, filenames, playlistnames = updateplaylists(playlistspath, window, songsdict)
 
 selectedplaylists = []
-while True:
-    try:
-        print(f"selectedplaylists: {selectedplaylists}")
-        print(f"playlists: {[playlist.title for playlist in playlists]}")
-        selectedplaylists, playlists = gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists)
-    except WindowClosedError:
-        break
+
+
+async def run(window, playlists, playlistspath, songsdict, selectedplaylists):
+    while True:
+        try:
+            print(f"selectedplaylists: {selectedplaylists}")
+            print(f"playlists: {[playlist.title for playlist in playlists]}")
+            selectedplaylists, playlists = await gui_loop(window, playlists, playlistspath, songsdict, selectedplaylists)
+        except WindowClosedError:
+            break
+
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(run(window, playlists, playlistspath, songsdict, selectedplaylists))
+loop.close()
 
 window.close()

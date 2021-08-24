@@ -78,4 +78,7 @@ class Playlist:
 
     def add_multiple(self, songhash_list, songsdict):
         for songhash in songhash_list:
-            self.add(songhash, songsdict)
+            try:
+                self.add(songhash, songsdict)
+            except:
+                print(f"Couldn't add {songhash}")
